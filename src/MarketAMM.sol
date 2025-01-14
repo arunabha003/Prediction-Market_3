@@ -34,6 +34,7 @@ contract PolymarketAMM is
     /// @dev fee in basis points (e.g. 100 => 1%)
     uint256 public feeBps;
     uint256 public constant FEE_DENOM = 10_000;
+    uint256 public totalLiquidity; // Tracks the USDC value of LP liquidity.
 
     /// @dev events
     event LiquidityAdded(address indexed provider, uint256 usdcAmount, uint256 lpMinted);
@@ -67,110 +68,195 @@ contract PolymarketAMM is
         onlyOwner
     {}
 
-    /**
-     * @notice Provide USDC liquidity. Splits USDC into 'Yes' and 'No' reserves.
-     */
+    // /**
+    //  * @notice Provide USDC liquidity. Splits USDC into 'Yes' and 'No' reserves.
+    //  */
+    // function addLiquidity(uint256 usdcAmount) external marketOpen {
+    //     require(usdcAmount > 0, "Zero USDC");
+
+    //     // Transfer USDC in
+    //     bool ok = usdc.transferFrom(msg.sender, address(this), usdcAmount);
+    //     require(ok, "USDC transfer failed");
+
+    //     if (totalLPSupply == 0 && reserveYes == 0 && reserveNo == 0) {
+    //         // init: half to yes, half to no
+    //         // uint256 half = usdcAmount / 2;
+    //         reserveYes = usdcAmount;
+    //         reserveNo = usdcAmount;
+
+    //         // LP minted = total usdc
+    //         totalLPSupply = usdcAmount;
+    //         // Mint LP tokens (ID=2) to user
+    //         market.mintShares(msg.sender, 2, usdcAmount);
+
+    //         emit LiquidityAdded(msg.sender, usdcAmount, usdcAmount);
+    //     } else if(reserveNo==reserveYes)
+    //     {
+    //         reserveYes += usdcAmount;
+    //         reserveNo += usdcAmount;
+
+    //         totalLPSupply += usdcAmount;
+    //         market.mintShares(msg.sender, 2, usdcAmount);
+
+
+    //     }
+    //     else {
+    //         // // Pro-rata approach
+    //         uint256 currentTotal = reserveYes + reserveNo;
+    //         uint256 lpMinted = (usdcAmount * totalLPSupply) / currentTotal; 
+
+    //         totalLPSupply += lpMinted;
+    //         market.mintShares(msg.sender, 2, lpMinted);
+
+    //         // Distribute proportionally
+    //         uint256 yesAdd = (reserveYes * usdcAmount) / currentTotal;
+    //         uint256 noAdd = usdcAmount - yesAdd;
+
+    //         reserveYes += yesAdd;
+    //         reserveNo += noAdd;
+
+
+    //     }
+    // }
+
+
     function addLiquidity(uint256 usdcAmount) external marketOpen {
-        require(usdcAmount > 0, "Zero USDC");
+            require(usdcAmount > 0, "Zero USDC");
+    
+            // Transfer USDC in
+            bool ok = usdc.transferFrom(msg.sender, address(this), usdcAmount);
+            require(ok, "USDC transfer failed");
+    
+            if (totalLPSupply == 0 && reserveYes == 0 && reserveNo == 0) {
 
-        // Transfer USDC in
-        bool ok = usdc.transferFrom(msg.sender, address(this), usdcAmount);
-        require(ok, "USDC transfer failed");
+                reserveYes = usdcAmount;
+                reserveNo = usdcAmount;
+    
+                // LP minted = total usdc
+                totalLPSupply = usdcAmount;
+                totalLiquidity = usdcAmount;
+                // Mint LP tokens (ID=2) to user
+                market.mintShares(msg.sender, 2, usdcAmount);
+    
+                emit LiquidityAdded(msg.sender, usdcAmount, usdcAmount);
+            } 
+            else
 
-        if (totalLPSupply == 0 && reserveYes == 0 && reserveNo == 0) {
-            // init: half to yes, half to no
-            // uint256 half = usdcAmount / 2;
-            reserveYes = usdcAmount;
-            reserveNo = usdcAmount;
+            {
 
-            // LP minted = total usdc
-            totalLPSupply = usdcAmount;
-            // Mint LP tokens (ID=2) to user
-            market.mintShares(msg.sender, 2, usdcAmount);
+                (uint256 OldProbYES, uint256 OldProbNO) = returnProbabilities();
 
-            emit LiquidityAdded(msg.sender, usdcAmount, usdcAmount);
-        } else if(reserveNo==reserveYes)
-        {
-            reserveYes += usdcAmount;
-            reserveNo += usdcAmount;
+                //--------add usdc amount to both the yes and no token----------------//
 
-            totalLPSupply += usdcAmount;
-            market.mintShares(msg.sender, 2, usdcAmount);
+                reserveYes+=usdcAmount;
+                reserveNo+=usdcAmount;
+
+                totalLiquidity += usdcAmount;
+
+                //--------return the excess amount of the most probable token to the user-----------------//
+
+                uint256 newReserveYes = reserveYes;
+                uint256 newReserveNo = reserveNo;
+                uint256 excessAmount ;
+                if(reserveNo<reserveYes) //probability of yes is less
+                {
+
+                    excessAmount =newReserveNo- (newReserveYes*(1*1e6-OldProbNO))/OldProbNO;
+                    market.mintShares(msg.sender, 1, excessAmount);
+                    reserveNo -= excessAmount;
+                    // uint256 lpMinted = (usdcAmount*OldProbYES)/1e6; 
+                    uint256 lpMinted=usdcAmount-excessAmount;
+                    market.mintShares(msg.sender, 2, lpMinted);
+                    totalLPSupply += lpMinted;
+
+                }
+                else
+                {
+                    excessAmount = newReserveYes-(newReserveNo*(1*1e6-OldProbYES))/OldProbYES;
+                    market.mintShares(msg.sender, 0, excessAmount);
+                    reserveYes -= excessAmount;
+                    // uint256 lpMinted = (usdcAmount*OldProbNO)/1e6; 
+                    uint256 lpMinted=usdcAmount-excessAmount;
+                    market.mintShares(msg.sender, 2, lpMinted);
+
+                    totalLPSupply += lpMinted;
+                }
+
+                (uint256 NewProbYES, uint256 NewProbNO) = returnProbabilities();
+                require(OldProbYES==NewProbYES && OldProbNO==NewProbNO, "Probabilty should be constant");
+                
+
+            }
         }
-        else {
-            // // Pro-rata approach
-            uint256 currentTotal = reserveYes + reserveNo;
-            uint256 lpMinted = (usdcAmount * totalLPSupply) / currentTotal; 
 
-            totalLPSupply += lpMinted;
-            market.mintShares(msg.sender, 2, lpMinted);
-
-            // Distribute proportionally
-            uint256 yesAdd = (reserveYes * usdcAmount) / currentTotal;
-            uint256 noAdd = usdcAmount - yesAdd;
-
-            reserveYes += yesAdd;
-            reserveNo += noAdd;
-
-            // emit LiquidityAdded(msg.sender, usdcAmount, lpMinted);
-
-            // reserveYes += usdcAmount;
-            // reserveNo += usdcAmount;
-
-            // (uint256 probYES, uint256 probNO)=returnProbabilities();
-
-            // if(probYES>probNO)
-            // {
-            //     uint256 LPtoMint = (usdcAmount * probYES) / 1e6;
-
-            //     market.mintShares(msg.sender, 0, LPtoMint);
-            //     market.mintShares(msg.sender, 2, usdcAmount-LPtoMint);
-            //     emit LiquidityAdded(msg.sender, usdcAmount, LPtoMint);
-            // }
-            // else
-            // {
-            //     uint256 LPtoMint = (usdcAmount * probNO) / 1e6;
-
-            //     market.mintShares(msg.sender, 1, LPtoMint);
-            //     market.mintShares(msg.sender, 2, usdcAmount-LPtoMint);
-            //     emit LiquidityAdded(msg.sender, usdcAmount, LPtoMint);
-
-            // }
-
-
-        }
-    }
 
     
 
     /**
      * @notice Remove liquidity for your LP tokens. Get USDC back.
      */
+    // function removeLiquidity(uint256 lpAmount) external {
+    //     require(lpAmount > 0, "Zero LP");
+    //     uint256 userLPBal = market.balanceOf(msg.sender, 2);
+    //     require(lpAmount <= userLPBal, "Not enough LP");
+    
+
+    //      uint256 currentBalance = usdc.balanceOf(address(this));
+    //     // If no other logic has changed the contract's balance, 
+    //     // this should reflect the real amount of USDC that can be paid out.
+    
+    //     // 2) compute the user’s pro rata share of that real balance
+    //     uint256 usdcOut = (lpAmount * currentBalance) / totalLPSupply;
+    
+    //     // 3) burn the user’s LP tokens
+    //     market.burnShares(msg.sender, 2, lpAmount);
+    //     totalLPSupply -= lpAmount;
+    
+    
+    //     // 5) do the actual transfer
+    //     bool ok = usdc.transfer(msg.sender, usdcOut);
+    //     require(ok, "USDC transfer failed");
+    
+    //     emit LiquidityRemoved(msg.sender, lpAmount, usdcOut);
+    // }
+
+
+
+
+
+
     function removeLiquidity(uint256 lpAmount) external {
         require(lpAmount > 0, "Zero LP");
         uint256 userLPBal = market.balanceOf(msg.sender, 2);
         require(lpAmount <= userLPBal, "Not enough LP");
     
 
-        uint256 currentBalance = usdc.balanceOf(address(this));
+        //uint256 currentBalance = usdc.balanceOf(address(this));
         // If no other logic has changed the contract's balance, 
         // this should reflect the real amount of USDC that can be paid out.
     
         // 2) compute the user’s pro rata share of that real balance
-        uint256 usdcOut = (lpAmount * currentBalance) / totalLPSupply;
+        // uint256 usdcOut = (lpAmount * totalLiquidity) / totalLPSupply;
     
         // 3) burn the user’s LP tokens
         market.burnShares(msg.sender, 2, lpAmount);
         totalLPSupply -= lpAmount;
+        totalLiquidity-=lpAmount;
     
     
         // 5) do the actual transfer
-        bool ok = usdc.transfer(msg.sender, usdcOut);
+        bool ok = usdc.transfer(msg.sender, lpAmount);
         require(ok, "USDC transfer failed");
     
-        emit LiquidityRemoved(msg.sender, lpAmount, usdcOut);
+        emit LiquidityRemoved(msg.sender, lpAmount, lpAmount);
     }
-    
+
+
+
+
+
+
+
 
     /**
      * @notice Buy outcome shares (0=YES or 1=NO) with USDC via x*y=k

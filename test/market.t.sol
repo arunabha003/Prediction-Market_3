@@ -296,8 +296,8 @@ contract PolymarketFlowTest is Test {
         console.log("USDC balance after Bob's betting ", mockUSDC.balanceOf(bob));
         vm.stopPrank();
 
-        console.log(" total YES token share after Bob's bet: ", amm.reserveYes());
-        console.log(" Initially total NO token share after Bob's bet : ", amm.reserveNo());
+        console.log(" total YES token of amm share after bob's bet: ", amm.reserveYes());
+        console.log(" Initially total NO token share of amm after bob's bet : ", amm.reserveNo());
 
 
 
@@ -496,6 +496,7 @@ contract PolymarketFlowTest is Test {
         (uint256 yes, uint256 no) = amm.returnProbabilities();
         console.log("Probabilities before uneven LP",yes, no);
 
+
         //--------------------Adding more LPs-------------------//
 
         vm.startPrank(luv);
@@ -503,6 +504,8 @@ contract PolymarketFlowTest is Test {
         amm.addLiquidity(3_000e6);
         vm.stopPrank();
 
+        console.log("LP token of luv", market.balanceOf(luv, 2));
+        console.log("lp token of arun", market.balanceOf(arun, 2));
 
         (uint256 yesAfter, uint256 noAfter) = amm.returnProbabilities();
         console.log("Probabilities before uneven LP",yesAfter, noAfter);
@@ -647,21 +650,21 @@ contract PolymarketFlowTest is Test {
 
         //--------------------luv removes his winning tokens-------------------//
 
-        // vm.startPrank(luv);
-        // uint256 luvNOBalanceBefore = market.balanceOf(luv, 0);
-        // uint256 luvUSDCBefore = mockUSDC.balanceOf(luv);
-        // market.redeemWinnings(market.YES_TOKEN_ID(), luvNOBalanceBefore);
+        vm.startPrank(luv);
+        uint256 luvNOBalanceBefore = market.balanceOf(luv, 0);
+        uint256 luvUSDCBefore = mockUSDC.balanceOf(luv);
+        market.redeemWinnings(market.YES_TOKEN_ID(), luvNOBalanceBefore);
 
-        // uint256 luvUSDCAfter = mockUSDC.balanceOf(luv);
-        // assertEq(
-        //     luvUSDCAfter,
-        //     luvUSDCBefore + luvNOBalanceBefore,
-        //     "Bob should gain 1 USDC per YES share"
-        // );
+        uint256 luvUSDCAfter = mockUSDC.balanceOf(luv);
+        assertEq(
+            luvUSDCAfter,
+            luvUSDCBefore + luvNOBalanceBefore,
+            "Bob should gain 1 USDC per YES share"
+        );
 
-        // uint256 luvNOAfter = market.balanceOf(luv, 0);
-        // assertEq(luvNOAfter,0 , "Luv NO shares burned on redeem");
-        // console.log("Final USDC balance of Luv", mockUSDC.balanceOf(luv));
+        uint256 luvNOAfter = market.balanceOf(luv, 0);
+        assertEq(luvNOAfter,0 , "Luv NO shares burned on redeem");
+        console.log("Final USDC balance of Luv", mockUSDC.balanceOf(luv));
 
 
     
