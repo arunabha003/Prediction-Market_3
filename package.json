@@ -1,0 +1,6 @@
+{
+  "name": "prediction-markets",
+  "dependencies": {
+    "@prediction-markets/sdk": "link:sdk"
+  }
+}

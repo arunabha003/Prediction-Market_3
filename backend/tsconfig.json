@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@/*": ["./*"],
+      "@common/*": ["src/common/*"],
+      "@abis": ["src/common/abis"],
+      "@abis/*": ["src/common/abis/*"],
+      "@decorators": ["src/common/decorators"],
+      "@decorators/*": ["src/common/decorators/*"],
+      "@dtos": ["src/common/dtos"],
+      "@dtos/*": ["src/common/dtos/*"],
+      "@interceptors": ["src/common/interceptors"],
+      "@interceptors/*": ["src/common/interceptors/*"],
+      "@utils": ["src/common/utils"],
+      "@utils/*": ["src/common/utils/*"]
+    }
+  }
+}

@@ -1,9 +1,0 @@
-  USDC total balance before any betting  8000000000
-  Bob's YES token share : 1324414716
-  Alice's NO token share : 3145927147
-  Jimmy's YES token share : 1461564580
-  USDC balance after all betting  14000000000
-  USDC balance after all redeeming  11214020704
-  USDC gained by LP provider Arun 5058473
-  USDC gained by LP provider Luv 3035084
-  USDC balance of AMM after all liqudity removal 3205927147

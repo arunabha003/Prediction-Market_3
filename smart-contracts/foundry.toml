@@ -1,0 +1,18 @@
+[profile.default]
+src = 'contracts'
+out = 'out'
+libs = ['lib']
+force = true # Required by openzeppelin-foundry-upgrades
+ffi = true # Required by openzeppelin-foundry-upgrades
+ast = true # Required by openzeppelin-foundry-upgrades 
+build_info = true # Required by openzeppelin-foundry-upgrades
+extra_output = ["storageLayout"]
+auto_detect_solc = true
+
+
+remappings = [
+  "@solady=lib/solady/",
+  "@forge=lib/forge-std/src/",
+  '@openzeppelin/contracts=lib/openzeppelin-contracts/contracts',
+  '@openzeppelin/contracts-upgradeable=lib/openzeppelin-contracts-upgradeable/contracts'
+]
