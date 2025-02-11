@@ -7,7 +7,7 @@ import "./errors/CommonErrors.sol";
 import "./errors/MarketErrors.sol";
 
 import {IMarket} from "./interfaces/IMarket.sol";
-import {IMarketAMM} from "./interfaces/IMarketAMM.sol";
+import {IMarketAMM} from "./interfaces/IMarketAMM3.sol";
 import {IOracle} from "./interfaces/IOracle.sol";
 
 /**
@@ -467,9 +467,10 @@ contract Market is IMarket, Initializable {
             return _outcomeIndex == resolvedOutcomeIndex ? ONE : 0;
         }
 
+        //@changes expected args 2 given 3
         return marketAMM.getOutcomePrice(
             _outcomeIndex,
-            poolData.totalAvailableShares,
+            // poolData.totalAvailableShares,
             IMarketAMM.MarketPoolState({liquidity: poolData.liquidity, outcomeShares: _getPoolShares()})
         );
     }

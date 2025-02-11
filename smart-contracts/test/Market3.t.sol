@@ -14,18 +14,18 @@ import "../contracts/errors/CommonErrors.sol";
 import "../contracts/errors/MarketErrors.sol";
 
 import {IMarket} from "../contracts/interfaces/IMarket.sol";
-import {IMarketAMM} from "../contracts/interfaces/IMarketAMM.sol";
+import {IMarketAMM} from "../contracts/interfaces/IMarketAMM3.sol";
 import {IOracle} from "../contracts/interfaces/IOracle.sol";
 
-import {MarketAMM} from "../contracts/MarketAMM.sol";
-import {Market} from "../contracts/Market.sol";
+import {MarketAMM3} from "../contracts/MarketAMM3.sol";
+import {Market} from "../contracts/Market3.sol";
 import {CentralizedOracle} from "../contracts/CentralizedOracle.sol";
 
 /**
  * @title MarketAMMTest (3-outcome version)
  * @notice This test file is adapted for a 3-outcome market.
  */
-contract MarketAMMTest is Test {
+contract MarketAMMTest3 is Test {
     using Math for uint256;
 
     uint256 constant BPS = 10000;
@@ -132,7 +132,7 @@ contract MarketAMMTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function setUp() public {
-        marketAMM = new MarketAMM();
+        marketAMM = new MarketAMM3();
         oracleImplementation = address(new CentralizedOracle());
         marketImplementation = address(new Market());
 
@@ -695,8 +695,8 @@ contract MarketAMMTest is Test {
         // totalAvailableShares => preSell + (3 * -100) + bobPreSellOutcome0Shares
         // Because we remove 100 from each outcome (the code subtracts _receiveAmount from .total and .available for each outcome)
         // and we add back the shares from bob. So net is -3*100 + bobPreSellOutcome0Shares. 
-        uint256 expectedDelta = -(3 * 100 ether) + bobPreSellOutcome0Shares;
-        assertEq(poolData.totalAvailableShares, preSellPoolData.totalAvailableShares + expectedDelta);
+        int256 expectedDelta = -int(3 * 100 ether) + int(bobPreSellOutcome0Shares);
+        assertEq(int256(poolData.totalAvailableShares), int256(preSellPoolData.totalAvailableShares) + expectedDelta);
 
         // Each outcome's total shares is down by 100
         for (uint256 i = 0; i < 3; i++) {
